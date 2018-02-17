@@ -1,0 +1,11 @@
+*.pyc
+*.swp
+*.ipynb_checkpoints
+*.pth.tar
+*.pth
+*.pkl
+*.jpg
+.DS_Store
+.idea
+cocoapi/pycoco/pycocotools/_mask.c
+cocoapi/pycoco/pycocotools/_mask.so
