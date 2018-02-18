@@ -6,6 +6,7 @@ from cocoapi.pycoco.pycocotools.coco import COCO
 import json
 import argparse
 import os
+import codecs
 
 annotations = {
     'coco': ['annotations/captions_train2014.json'
@@ -53,6 +54,18 @@ def from_flickr_json(path):
 
     return captions
 
+def from_fasttext_vec(path, vocab_size, emb_size=300):
+    wordlist = []
+    vectors = []
+    with codecs.open(path, "r", "utf-8") as f:
+        for line in f.readlines()[0:vocab_size]:
+            splits = line.split()
+            word = splits[0]
+            vector = map(lambda x: float(x), splits[1:])
+            if len(vector) == emb_size:
+                vectors.append(vector)
+                wordlist.append(word)
+    return wordlist
 
 def from_txt(txt):
     captions = []
@@ -62,27 +75,24 @@ def from_txt(txt):
     return captions
 
 
-def build_vocab(data_path, data_name, jsons, threshold):
+def build_vocab(data_path, data_name, jsons, threshold, vocab_size=12000):
     """Build a simple vocabulary wrapper."""
     counter = Counter()
-    for path in jsons[data_name]:
-        full_path = os.path.join(os.path.join(data_path, data_name), path)
-        if data_name == 'coco':
+    if data_name == 'coco':
+        for path in jsons[data_name]:
+            full_path = os.path.join(os.path.join(data_path, data_name), path)
             captions = from_coco_json(full_path)
-        elif data_name == 'f8k' or data_name == 'f30k':
-            captions = from_flickr_json(full_path)
-        else:
-            captions = from_txt(full_path)
-        for i, caption in enumerate(captions):
-            tokens = nltk.tokenize.word_tokenize(
-                caption.lower().decode('utf-8'))
-            counter.update(tokens)
-
-            if i % 1000 == 0:
-                print("[%d/%d] tokenized the captions." % (i, len(captions)))
-
-    # Discard if the occurrence of the word is less than min_word_cnt.
-    words = [word for word, cnt in counter.items() if cnt >= threshold]
+            for i, caption in enumerate(captions):
+                tokens = nltk.tokenize.word_tokenize(
+                    caption.lower().decode('utf-8'))
+                counter.update(tokens)
+                if i % 1000 == 0:
+                    print("[%d/%d] tokenized the captions." % (i, len(captions)))
+            # Discard if the occurrence of the word is less than min_word_cnt.
+        words = [word for word, cnt in counter.items() if cnt >= threshold]
+    elif data_name == 'fasttext':
+        full_path = os.path.join(data_path, data_name, '30k.wiki.en.vec')
+        words = from_fasttext_vec(full_path, vocab_size)
 
     # Create a vocab wrapper and add some special tokens.
     vocab = Vocabulary()
@@ -97,17 +107,18 @@ def build_vocab(data_path, data_name, jsons, threshold):
     return vocab
 
 
-def main(data_path, data_name):
-    vocab = build_vocab(data_path, data_name, jsons=annotations, threshold=4)
-    with open('./vocab/%s_vocab.pkl' % data_name, 'wb') as f:
+def main(data_path, data_name, vocab_size):
+    vocab = build_vocab(data_path, data_name, vocab_size=vocab_size, jsons=annotations, threshold=4)
+    with open('./data/vocab/%s_vocab.pkl' % data_name, 'wb') as f:
         pickle.dump(vocab, f, pickle.HIGHEST_PROTOCOL)
     print("Saved vocabulary file to ", './vocab/%s_vocab.pkl' % data_name)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', default='/w/31/faghri/vsepp_data/')
-    parser.add_argument('--data_name', default='coco',
-                        help='{coco,f8k,f30k,10crop}_precomp|coco|f8k|f30k')
+    parser.add_argument('--data_path', default='./data/')
+    parser.add_argument('--data_name', default='fasttext',
+                        help='{coco,fasttext}')
+    parser.add_argument('--vocab_size', default=12000)
     opt = parser.parse_args()
-    main(opt.data_path, opt.data_name)
+    main(opt.data_path, opt.data_name, opt.vocab_size)
