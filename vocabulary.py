@@ -1,4 +1,5 @@
 # Create a vocabulary wrapper
+import numpy as np
 import nltk
 import pickle
 from collections import Counter
@@ -17,6 +18,7 @@ class Vocabulary(object):
     """Simple vocabulary wrapper."""
 
     def __init__(self):
+        self.specialtokens = ['<pad>','<start>','<end>','<unk>']
         self.word2idx = {}
         self.idx2word = {}
         self.idx = 0
@@ -55,17 +57,23 @@ def from_flickr_json(path):
     return captions
 
 def from_fasttext_vec(path, vocab_size, emb_size=300):
+    print('loading vocabs and vectors from fasttext...')
+    '''Load the word list and its corresponding word vectors'''
     wordlist = []
-    vectors = []
+    vectorsstring = []
     with codecs.open(path, "r", "utf-8") as f:
         for line in f.readlines()[0:vocab_size]:
             splits = line.split()
             word = splits[0]
             vector = map(lambda x: float(x), splits[1:])
             if len(vector) == emb_size:
-                vectors.append(vector)
+                vectorsstring.append(vector)
                 wordlist.append(word)
-    return wordlist
+    # convert vector string to numpy array
+    npvectors = np.ndarray((len(wordlist), emb_size))
+    for i in range(len(wordlist)):
+        npvectors[i] = np.array(vectorsstring[i])
+    return wordlist, npvectors
 
 def from_txt(txt):
     captions = []
@@ -77,6 +85,13 @@ def from_txt(txt):
 
 def build_vocab(data_path, data_name, jsons, threshold, vocab_size=12000):
     """Build a simple vocabulary wrapper."""
+    # Create a vocab wrapper and add some special tokens.
+    vocab = Vocabulary()
+    for token in vocab.specialtokens:
+        vocab.add_word(token)
+
+    wordvectors = None # only applies for fasttext
+
     counter = Counter()
     if data_name == 'coco':
         for path in jsons[data_name]:
@@ -92,27 +107,27 @@ def build_vocab(data_path, data_name, jsons, threshold, vocab_size=12000):
         words = [word for word, cnt in counter.items() if cnt >= threshold]
     elif data_name == 'fasttext':
         full_path = os.path.join(data_path, data_name, '30k.wiki.en.vec')
-        words = from_fasttext_vec(full_path, vocab_size)
-
-    # Create a vocab wrapper and add some special tokens.
-    vocab = Vocabulary()
-    vocab.add_word('<pad>')
-    vocab.add_word('<start>')
-    vocab.add_word('<end>')
-    vocab.add_word('<unk>')
+        words, npvectors = from_fasttext_vec(full_path, vocab_size)
+        # random vectors for special tokens
+        specvectors = np.random.uniform(-0.1,0.1, (len(vocab.specialtokens),npvectors.shape[1]))
+        npvectors = np.concatenate((specvectors, npvectors), axis=0)
+        wordvectors = npvectors
 
     # Add words to the vocabulary.
     for i, word in enumerate(words):
         vocab.add_word(word)
-    return vocab
 
+    return vocab, wordvectors
 
-def main(data_path, data_name, vocab_size):
-    vocab = build_vocab(data_path, data_name, vocab_size=vocab_size, jsons=annotations, threshold=4)
+def run(data_path, data_name, vocab_size=12000):
+    vocab, wordvectors = build_vocab(data_path, data_name, vocab_size=vocab_size, jsons=annotations, threshold=4)
     with open('./data/vocab/%s_vocab.pkl' % data_name, 'wb') as f:
         pickle.dump(vocab, f, pickle.HIGHEST_PROTOCOL)
     print("Saved vocabulary file to ", './vocab/%s_vocab.pkl' % data_name)
-
+    if data_name == 'fasttext':
+        with open('./data/fasttext/fasttext_vectors.pkl', 'wb') as f:
+            pickle.dump(wordvectors, f, pickle.HIGHEST_PROTOCOL)
+        print("Saved numpy vectors file to ", './data/fasttext/fasttext_vectors.pkl')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -121,4 +136,4 @@ if __name__ == '__main__':
                         help='{coco,fasttext}')
     parser.add_argument('--vocab_size', default=12000)
     opt = parser.parse_args()
-    main(opt.data_path, opt.data_name, opt.vocab_size)
+    run(opt.data_path, opt.data_name, opt.vocab_size)

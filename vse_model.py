@@ -11,9 +11,9 @@ import numpy as np
 def l2norm(X):
     """L2-normalize columns of X
     """
-    norm = torch.pow(X, 2).sum(dim=1).sqrt()
+    norm = torch.pow(X, 2).sum(dim=1, keepdim=True).sqrt()
     norm = norm.unsqueeze(1) # recent version require non-singleton dimension for expand
-    X = torch.div(X, norm.expand_as(X))
+    X = torch.div(X, norm)
     return X
 
 # tutorials/09 - Image Captioning
@@ -147,6 +147,9 @@ class EncoderText(nn.Module):
 
         return out
 
+    def load_embedding_weights(self, npwordvectors):
+        wordvectors = torch.Tensor(npwordvectors)
+        self.embed.weight.data.copy_(wordvectors)
 
 def cosine_sim(im, s):
     """Cosine similarity between all the image and sentence pairs
@@ -216,10 +219,8 @@ class VSE(object):
         # tutorials/09 - Image Captioning
         # Build Models
         self.grad_clip = opt.grad_clip
-        self.img_enc = EncoderImage(opt.data_name, opt.img_dim, opt.embed_size,
-                                    opt.finetune, opt.cnn_type,
-                                    use_abs=opt.use_abs,
-                                    no_imgnorm=opt.no_imgnorm)
+        self.img_enc = EncoderImage(opt.embed_size, opt.finetune, opt.cnn_type,
+                                    use_abs=opt.use_abs, no_imgnorm=opt.no_imgnorm)
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,
                                    opt.embed_size, opt.num_layers,
                                    use_abs=opt.use_abs)

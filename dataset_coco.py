@@ -211,23 +211,15 @@ def get_loaders(data_name, vocab, batch_size, workers, opt):
     # Build Dataset Loader
     roots, ids = get_paths(dpath, data_name, opt.use_restval)
 
-    transform = get_transform(data_name, 'train', opt)
-    train_loader = get_loader_single(opt.data_name, 'train',
-                                     roots['train']['img'],
-                                     roots['train']['cap'],
-                                     vocab, transform, ids=ids['train'],
-                                     batch_size=batch_size, shuffle=True,
-                                     num_workers=workers,
-                                     collate_fn=collate_fn)
+    transform = get_transform('train', opt)
+    train_loader = get_loader_single(opt.data_name, roots['train']['img'], roots['train']['cap'],
+                                     vocab, transform, ids=ids['train'], batch_size=batch_size, shuffle=True,
+                                     num_workers=workers, collate_fn=collate_fn)
+    transform = get_transform('val', opt)
+    val_loader = get_loader_single(opt.data_name, roots['val']['img'], roots['val']['cap'],
+                                   vocab, transform, ids=ids['val'], batch_size=batch_size, shuffle=False,
+                                   num_workers=workers, collate_fn=collate_fn)
 
-    transform = get_transform(data_name, 'val', opt)
-    val_loader = get_loader_single(opt.data_name, 'val',
-                                   roots['val']['img'],
-                                   roots['val']['cap'],
-                                   vocab, transform, ids=ids['val'],
-                                   batch_size=batch_size, shuffle=False,
-                                   num_workers=workers,
-                                   collate_fn=collate_fn)
     return train_loader, val_loader
 
 
@@ -238,12 +230,8 @@ def get_test_loader(split_name, data_name, vocab, crop_size, batch_size,
     # Build Dataset Loader
     roots, ids = get_paths(dpath, data_name, opt.use_restval)
 
-    transform = get_transform(data_name, split_name, opt)
-    test_loader = get_loader_single(opt.data_name, split_name,
-                                    roots[split_name]['img'],
-                                    roots[split_name]['cap'],
-                                    vocab, transform, ids=ids[split_name],
-                                    batch_size=batch_size, shuffle=False,
-                                    num_workers=workers,
-                                    collate_fn=collate_fn)
+    transform = get_transform(split_name, opt)
+    test_loader = get_loader_single(split_name, roots[split_name]['img'], roots[split_name]['cap'],
+                                    vocab, transform, ids=ids[split_name], batch_size=batch_size, shuffle=False,
+                                    num_workers=workers, collate_fn=collate_fn)
     return test_loader
