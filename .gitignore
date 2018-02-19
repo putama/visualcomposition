@@ -9,3 +9,5 @@
 .idea
 cocoapi/pycoco/pycocotools/_mask.c
 cocoapi/pycoco/pycocotools/_mask.so
+data/coco/images/
+data/mitstates_data/images
