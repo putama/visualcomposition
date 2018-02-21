@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import pickle
 
+import argparse
 import numpy
 from dataset_coco import get_test_loader
 import time
@@ -122,7 +123,7 @@ def encode_data(model, data_loader, log_step=10, logging=print):
     return img_embs, cap_embs
 
 
-def evalrank(model_path, data_path=None, split='dev', fold5=False, save_all=False):
+def evalrank(model_path, data_path=None, split='dev', fold5=False):
     """
     Evaluate a trained model on either dev or test. If `fold5=True`, 5 fold
     cross-validation is done (only for MSCOCO). Otherwise, the full data is
@@ -152,7 +153,7 @@ def evalrank(model_path, data_path=None, split='dev', fold5=False, save_all=Fals
     # load model state
     model.load_state_dict(checkpoint['model'])
 
-    print('Loading dataset')
+    print('Loading dataset. Data name: %s' % opt.data_name)
     data_loader = get_test_loader(split, opt.data_name, vocab, opt.crop_size,
                                   opt.batch_size, opt.workers, opt)
 
@@ -195,19 +196,6 @@ def evalrank(model_path, data_path=None, split='dev', fold5=False, save_all=Fals
             rsum = r[0] + r[1] + r[2] + ri[0] + ri[1] + ri[2]
             print("rsum: %.1f ar: %.1f ari: %.1f" % (rsum, ar, ari))
             results += [list(r) + list(ri) + [ar, ari, rsum]]
-
-            if save_all:
-                # saving result for error analysis
-                fail_ids_i = None
-                fail_ids_t = None
-                current_t = map(lambda x: x[0], (np.argwhere(rt0[0]) + (1000 * i)) * 5)
-                current_i = map(lambda x: x[0], np.argwhere(rti0[0]) + (5000 * i))
-                if i == 0:
-                    fail_ids_t = current_t
-                    fail_ids_i = current_i
-                else:
-                    fail_ids_t = fail_ids_t + current_t
-                    fail_ids_i = fail_ids_i + current_i
 
         print("-----------------------------------")
         print("Mean metrics: ")
@@ -327,3 +315,11 @@ def t2i(images, captions, npts=None, measure='cosine', return_ranks=False):
     else:
         return (r1, r5, r10, medr, meanr)
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_path', default='./data/')
+    parser.add_argument('--model_name', default='coco_vse++_restval')
+    opt = parser.parse_args()
+
+    model_path = os.path.join('runs', opt.model_name, 'model_best.pth.tar')
+    evalrank(model_path, split='test', data_path=opt.data_path, fold5=True)

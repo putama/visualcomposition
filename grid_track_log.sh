@@ -1,1 +1,1 @@
-tail -f gridlogs/grid_train_vse.sh.o$@ gridlogs/grid_train_vse.sh.e$@
+tail -f gridlogs/grid_*.sh.o$@ gridlogs/grid_*.sh.e$@

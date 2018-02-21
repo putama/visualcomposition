@@ -13,6 +13,4 @@
 source /data/people/putama/pytorch_venv/bin/activate
 echo "=> job submitted"
 
-python vse_train.py --data_path data \
-    --data_name coco --logger_name runs/coco_vse++_restval_fasttext \
-    --max_violation --batch_size 128 --use_restval --which_vocab fasttext
+python -u $@
