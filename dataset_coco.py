@@ -231,7 +231,7 @@ def get_test_loader(split_name, data_name, vocab, crop_size, batch_size,
     roots, ids = get_paths(dpath, data_name, opt.use_restval)
 
     transform = get_transform(split_name, opt)
-    test_loader = get_loader_single(split_name, roots[split_name]['img'], roots[split_name]['cap'],
+    test_loader = get_loader_single(data_name, roots[split_name]['img'], roots[split_name]['cap'],
                                     vocab, transform, ids=ids[split_name], batch_size=batch_size, shuffle=False,
                                     num_workers=workers, collate_fn=collate_fn)
     return test_loader

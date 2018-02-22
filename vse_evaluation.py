@@ -143,7 +143,7 @@ def evalrank(model_path, data_path=None, split='dev', fold5=False):
 
     # load vocabulary used by the model
     with open(os.path.join(opt.vocab_path,
-                           '%s_vocab.pkl' % opt.data_name), 'rb') as f:
+                           '%s_vocab.pkl' % opt.which_vocab), 'rb') as f:
         vocab = pickle.load(f)
     opt.vocab_size = len(vocab)
 
@@ -209,11 +209,6 @@ def evalrank(model_path, data_path=None, split='dev', fold5=False):
               mean_metrics[5:10])
 
     torch.save({'rt': rt, 'rti': rti}, 'ranks.pth.tar')
-
-    if save_all:
-        torch.save({'img_embs': img_embs, 'cap_embs': cap_embs}, 'embeddings.pth')
-        torch.save({'fail_ids_t': fail_ids_t, 'fail_ids_i': fail_ids_i}, 'failure_log.pth')
-
 
 def i2t(images, captions, npts=None, measure='cosine', return_ranks=False):
     """
