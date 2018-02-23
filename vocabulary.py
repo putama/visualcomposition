@@ -134,6 +134,6 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', default='./data/')
     parser.add_argument('--data_name', default='fasttext',
                         help='{coco,fasttext}')
-    parser.add_argument('--vocab_size', default=12000)
+    parser.add_argument('--vocab_size', default=30000)
     opt = parser.parse_args()
     run(opt.data_path, opt.data_name, opt.vocab_size)

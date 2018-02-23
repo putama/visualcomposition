@@ -18,7 +18,8 @@ class MITstatesDataset(data.Dataset):
         # load image
         imgid = self.splitdata['imIds'][index]
         imgpath = self.imgdata['images'][imgid]['file_name']
-        image = Image.open(os.path.join(self.root, 'images', imgpath.replace('_',' ',1))).convert('RGB')
+        imgpathfull = os.path.join(self.root, 'images', imgpath.replace('_',' ',1))
+        image = Image.open(imgpathfull).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
 
@@ -30,7 +31,7 @@ class MITstatesDataset(data.Dataset):
         if objatt_tensor is None:
             return None, None, None, None
 
-        return image, objatt_tensor, imgid, imgpath
+        return image, objatt_tensor, imgid, imgpathfull
 
     def text_to_ids(self, phrase):
         ids = [] # word/token ids
