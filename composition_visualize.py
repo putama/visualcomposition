@@ -22,7 +22,7 @@ from PIL import Image
 def main():
     print('evaluate vse on visual composition...')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', default='runs/coco_vse++_restval/model_best.pth.tar')
+    parser.add_argument('--model_path', default='runs/coco_vse++_best/model_best.pth.tar')
     parser.add_argument('--data_root', default='data/mitstates_data')
     parser.add_argument('--image_data', default='mit_image_data.pklz')
     parser.add_argument('--labels_train', default='split_labels_train.pklz')
@@ -38,6 +38,7 @@ def main():
     print(args)
 
     imgdata = im_utils.load(args.data_root + '/' + args.image_data)
+    labelstrain = im_utils.load(args.data_root + '/' + args.labels_train)
     labelstest = im_utils.load(args.data_root + '/' + args.labels_test)
     imgmetadata = im_utils.load(args.data_root + '/' + args.meta_data)
 
@@ -51,7 +52,7 @@ def main():
     opt = checkpoint['opt']
 
     # load vocabulary used by the model
-    with open('{}/{}_vocab.pkl'.format(args.vocab_path, opt.which_vocab), 'rb') as f:
+    with open('{}/{}_vocab.pkl'.format(args.vocab_path, 'coco'), 'rb') as f:
         vocab = pickle.load(f)
     opt.vocab_size = len(vocab)
 
@@ -66,7 +67,7 @@ def main():
     print('=> model initiated and weights loaded')
 
     # load mitstates dataset
-    dataset = data_utils.MITstatesDataset(args.data_root, labelstest,
+    dataset = data_utils.MITstatesDataset(args.data_root, labelstrain,
                                           imgdata, imgmetadata, vocab,
                                           transform=get_transform('test', opt))
     dataloader = data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=False,
@@ -78,30 +79,54 @@ def main():
                                         transforms.ToTensor()])
 
     objembeddingslist = []
-    imgtmblist = []
+    objimgtmblist = []
     objcounter = 0
+
+    attembeddingslist = []
+    attimgtmblist = []
+    attcounter = 0
+
+    embmetadata = []
+
     for i, (images, objatts, lengths, imgids, imgpaths) in enumerate(dataloader):
+        print '{}/{} data items iterated'.format(i * args.batch_size,
+                                                 len(dataloader) * args.batch_size)
         if images is None:
             print 'None batch: full of unked'
             continue
 
         for j, objatt in enumerate(objatts):
-            if objatt[2] == vocab(args.visualize_object):
+            if objatt[2] in [vocab('dog'), vocab('elephant'),
+                             vocab('cat'), vocab('snake'), vocab('horse'),
+                             vocab('banana'), vocab('apple'), vocab('lemon'), vocab('orange')
+                             ]: #== vocab(args.visualize_object):
+                embmetadata.append(vocab.idx2word[objatt[2]])
+
                 img = images[j].unsqueeze(0)
                 imgemb = model.img_enc(Variable(img))
-                objembeddingslist.append(imgemb)
+                objembeddingslist.append(imgemb.data)
 
                 imgtmb = thumbsnailtrf(Image.open(imgpaths[j]).convert('RGB'))
-                imgtmblist.append(imgtmb)
+                objimgtmblist.append(imgtmb)
 
                 objcounter += 1
 
-    print('{} objects found and projected!'.format(objcounter))
-    objembeddings = torch.cat(objembeddingslist, 0)
-    imgthumbnails = torch.stack(imgtmblist, 0)
+            # if objatt[1] == vocab(args.visualize_attribute):
+            #     img = images[j].unsqueeze(0)
+            #     imgemb = model.img_enc(Variable(img))
+            #     attembeddingslist.append(imgemb.data)
 
-    writer.add_embedding(objembeddings, label_img=imgthumbnails)
+        print('{} cat/dog found and projected!'.format(objcounter))
+
+    objembeddings = torch.cat(objembeddingslist, 0)
+    imgthumbnails = torch.stack(objimgtmblist, 0)
+
+    writer.add_embedding(objembeddings, label_img=imgthumbnails, metadata=embmetadata)
+
+    # export scalar data to JSON for external processing
+    writer.export_scalars_to_json("./all_scalars.json")
     writer.close()
+    print('projection completed!')
 
 if __name__ == '__main__':
     main()
