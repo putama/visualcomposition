@@ -1,3 +1,4 @@
+*.ipynb
 *.pyc
 *.swp
 *.ipynb_checkpoints

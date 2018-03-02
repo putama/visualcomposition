@@ -72,8 +72,13 @@ def main():
                         help='Take the absolute value of embedding vectors.')
     parser.add_argument('--no_imgnorm', action='store_true',
                         help='Do not normalize the image embeddings.')
-    parser.add_argument('--which_vocab', default='fasttext',
-                        help='{coco|fasttext} choose either coco or fasttext word vectors')
+    parser.add_argument('--which_vocab', default='cocomit',
+                        help='{cocomit|coco|fasttext} choose either coco or fasttext word vectors')
+
+    # multiple gpu training
+    parser.add_argument('--gpus', default=[0, 1], nargs='+', type=int,
+                        help="Use CUDA on the listed devices.")
+
     opt = parser.parse_args()
     print(opt)
 
@@ -93,10 +98,13 @@ def main():
     # Construct the model
     model = VSE(opt)
 
-    # initilize the word embeddings if fasttext vocab is chose
-    if opt.which_vocab == 'fasttext':
+    print("Forward CNN using ", torch.cuda.device_count(), " GPUs!")
+
+    # initilize the word embeddings if cocomit vocab is chosen
+    if opt.which_vocab == 'cocomit':
         vectors_full_path = os.path.join(opt.data_path, '%s/%s_vectors.pkl' %
-                                         (opt.which_vocab, opt.which_vocab))
+                                         ('fasttext', opt.which_vocab))
+        print("=> loading from vector file: " + vectors_full_path)
         # read the vectors in case it is not exist
         if not os.path.isfile(vectors_full_path):
             vocabulary.run(opt.data_path, opt.which_vocab)

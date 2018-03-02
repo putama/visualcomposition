@@ -40,6 +40,7 @@ class MITstatesDataset(data.Dataset):
         for token in tokens:
             tokenid = self.vocab(token)
             if tokenid == self.vocab('<unk>'):
+                print '[unked]: ' + phrase
                 return None
             ids.append(tokenid)
         ids.append(self.vocab('<end>'))

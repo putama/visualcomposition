@@ -18,7 +18,7 @@ from operator import itemgetter
 def main():
     print('evaluate vse on visual composition...')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', default='runs/coco_vse++_restval/model_best.pth.tar')
+    parser.add_argument('--model_path', default='runs/cocomit_vse++/model_best.pth.tar')
     parser.add_argument('--data_root', default='data/mitstates_data')
     parser.add_argument('--image_data', default='mit_image_data.pklz')
     parser.add_argument('--labels_train', default='split_labels_train.pklz')
@@ -47,15 +47,16 @@ def main():
     # load vocabulary used by the model
     with open('{}/{}_vocab.pkl'.format(args.vocab_path, opt.which_vocab), 'rb') as f:
         vocab = pickle.load(f)
+        print('vocab loaded from: {}/{}_vocab.pkl'.format(args.vocab_path, opt.which_vocab))
     opt.vocab_size = len(vocab)
 
-    # print('=> checkpoint loaded')
-    # print(opt)
+    print('=> checkpoint loaded')
+    print(opt)
 
     # construct model
-    # model = VSE(opt)
+    model = VSE(opt)
     # load model state
-    # model.load_state_dict(checkpoint['model'])
+    model.load_state_dict(checkpoint['model'])
 
     print('=> model initiated and weights loaded')
 
@@ -71,10 +72,10 @@ def main():
         print '{} phrases encoded to vectors'.format(i * 64)
         if torch.cuda.is_available():
             objatts = objatts.cuda()
-        # objattsvecs = model.txt_enc(Variable(objatts), [4 for i in range(len(objatts))])
-        # allobjattsvecs.append(objattsvecs)
-    # allobjattsvecs = torch.cat(allobjattsvecs)
-    # allobjattsvecs = allobjattsvecs.data.cpu().numpy()
+        objattsvecs = model.txt_enc(Variable(objatts), [4 for i in range(len(objatts))])
+        allobjattsvecs.append(objattsvecs)
+    allobjattsvecs = torch.cat(allobjattsvecs)
+    allobjattsvecs = allobjattsvecs.data.cpu().numpy()
 
     totaltop10 = 0.0
     totaltop5 = 0.0
