@@ -16,7 +16,10 @@ class MITstatesDataset(data.Dataset):
 
     def __getitem__(self, index):
         # load image
-        imgid = self.splitdata['imIds'][index]
+        if self.splitdata.has_key('allTrainObImIds'):
+            imgid = self.splitdata['allTrainObImIds'][index]
+        else:
+            imgid = self.splitdata['imIds'][index]
         imgpath = self.imgdata['images'][imgid]['file_name']
         imgpathfull = os.path.join(self.root, 'images', imgpath.replace('_',' ',1))
         image = Image.open(imgpathfull).convert('RGB')
@@ -24,13 +27,17 @@ class MITstatesDataset(data.Dataset):
             image = self.transform(image)
 
         # load att-obj phrase
-        objatt_id = self.imgdata['annotations'][imgid]['pair_labs'][0]
-        objatt_name = self.imgmetadata['pairNames'][objatt_id]
-        objatt_tensor = self.text_to_ids(objatt_name)
+        if len(self.imgdata['annotations'][imgid]['pair_labs']) == 0:
+            obj_id = self.imgdata['annotations'][imgid]['ob_labs'][0]
+            obj_name = self.imgmetadata['objects'][obj_id]
+            objatt_tensor = self.text_to_ids(obj_name)
+        else:
+            objatt_id = self.imgdata['annotations'][imgid]['pair_labs'][0]
+            objatt_name = self.imgmetadata['pairNames'][objatt_id]
+            objatt_tensor = self.text_to_ids(objatt_name)
 
         if objatt_tensor is None:
             return None, None, None, None
-
         return image, objatt_tensor, imgid, imgpathfull
 
     def text_to_ids(self, phrase):
@@ -65,14 +72,24 @@ class MITstatesDataset(data.Dataset):
 
 def custom_collate(items):
     try: # case where at least 1 item is not UNKED
+        items.sort(key=lambda x: len(x[1]), reverse=True)
         items = filter(lambda x: x[0] is not None, items)
-        images, objatt_tensors, imgids, imgpaths = zip(*items)
-        lengths = [len(phrase) for phrase in objatt_tensors]
+        
+        images, objatt_tuples, imgids, imgpaths = zip(*items)
+        lengths = [len(phrase) for phrase in objatt_tuples]
 
         # stack images and objatt phrase into a batch
         images = torch.stack(images, 0)
-        objatt_tensors = torch.stack(objatt_tensors, 0).long()
+
+        # tuples of 1D tensors to 2D tensors
+        objatt_tensors = torch.zeros(len(objatt_tuples), max(lengths)).long()
+        for i, objatt in enumerate(objatt_tuples):
+            end = lengths[i]
+            objatt_tensors[i, :end] = objatt[:end]
+
+        # objatt_tensors = torch.stack(objatt_tensors, 0).long()
 
         return images, objatt_tensors, lengths, imgids, imgpaths
     except:
+        print 'EXCEPTION!'
         return None, None, None, None, None

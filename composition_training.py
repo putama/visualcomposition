@@ -32,15 +32,18 @@ def main():
     parser.add_argument('--labels_test', default='split_labels_test.pklz')
     parser.add_argument('--meta_data', default='split_meta_info.pklz')
     parser.add_argument('--vocab_path', default='data/vocab')
-    parser.add_argument('--crop_size', default=224)
-    parser.add_argument('--batch_size', default=48)
+    parser.add_argument('--logger_name', default='runs/composition_session4_allobjects_batch64_decay5',
+                        help='Path to save the model and Tensorboard log.')
+    parser.add_argument('--lr_update', default=5, type=int)
+    parser.add_argument('--num_epochs', default=30, type=int)
+    parser.add_argument('--learning_rate', default=.0002, type=float)
+    parser.add_argument('--batch_size', default=64, type=int)
 
     args = parser.parse_args()
     print(args)
 
     imgdata = im_utils.load(args.data_root + '/' + args.image_data)
     labelstrain = im_utils.load(args.data_root + '/' + args.labels_train)
-    labelstest = im_utils.load(args.data_root + '/' + args.labels_test)
     imgmetadata = im_utils.load(args.data_root + '/' + args.meta_data)
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -74,14 +77,16 @@ def main():
     print('=> VSE model initiated and weights loaded')
 
     # load mitstates dataset
-    dataset = data_utils.MITstatesDataset(args.data_root, labelstest,
+    dataset = data_utils.MITstatesDataset(args.data_root, labelstrain,
                                           imgdata, imgmetadata, vocab,
                                           transform=get_transform('train', opt))
     dataloader = data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True,
                                  collate_fn=data_utils.custom_collate)
 
     print("Forward CNN using ", torch.cuda.device_count(), " GPUs!")
-    for epoch in range(opt.num_epochs):
+    for epoch in range(args.num_epochs):
+        adjust_learning_rate(args, model.optimizer, epoch)
+
         # average meters to record the training statistics
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -97,7 +102,6 @@ def main():
 
             # make sure train logger is used
             model.logger = train_logger
-
             model.train_emb(images, objatts, lengths)
 
             # Print log info
@@ -118,14 +122,19 @@ def main():
             tb_logger.log_value('data_time', data_time.val, step=model.Eiters)
             model.logger.tb_log(tb_logger, step=model.Eiters)
 
-        savepath = os.path.join(opt.logger_name,
-                                'epoch_{}_checkpoint.pth.tar'.format(epoch+1))
-        torch.save({
-            'epoch': epoch + 1,
-            'model': model.state_dict(),
-            'opt': opt,
-            'Eiters': model.Eiters,
-        }, savepath)
+        if epoch % 5 == 0:
+            savepath = os.path.join(args.logger_name, 'epoch_{}_checkpoint.pth.tar'.format(epoch+1))
+            torch.save({
+                'epoch': epoch + 1,
+                'model': model.state_dict(),
+                'opt': opt,
+                'Eiters': model.Eiters,
+            }, savepath)
+
+def adjust_learning_rate(opt, optimizer, epoch):
+    lr = opt.learning_rate * (0.1 ** (epoch // opt.lr_update))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 if __name__ == '__main__':
     main()
