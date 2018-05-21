@@ -4,7 +4,7 @@
 #$ -cwd
 #
 #  This is a long-running job
-#$ -l gpus=1
+#$ -l gpus=4
 #
 #$ -o gridlogs
 #
@@ -14,5 +14,5 @@ source /data/people/putama/pytorch_venv/bin/activate
 echo "=> job submitted"
 
 python vse_train.py --data_path data \
-    --data_name coco --logger_name runs/coco_vse++_restval_fasttext \
-    --max_violation --batch_size 128 --use_restval --which_vocab fasttext
+    --data_name coco --which_vocab cocomit --logger_name runs/cocomit_vse++_vgg_finetune \
+    --max_violation --batch_size 128 --use_restval --finetune --cnn_type vgg19

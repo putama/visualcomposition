@@ -69,7 +69,7 @@ def main():
                                           imgdata, imgmetadata, vocab,
                                           transform=get_transform('test', opt))
     dataloader = data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True,
-                                 collate_fn=data_utils.collate_test)
+                                 collate_fn=data_utils.custom_collate)
 
     writer = SummaryWriter(log_dir='/'.join(args.model_path.split('/')[0:2]))
     pil2tensor = transforms.Compose([transforms.ToTensor()])
